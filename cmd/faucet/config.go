@@ -2,9 +2,11 @@ package main
 
 import (
 	"flag"
-	"io/ioutil"
+	"fmt"
 	"log"
+	"os"
 	"strings"
+	"time"
 
 	"github.com/tendermint/starport/starport/pkg/cosmosfaucet"
 
@@ -16,19 +18,20 @@ const (
 )
 
 var (
-	port             int
-	keyringBackend   string
-	sdkVersion       string
-	keyName          string
-	keyMnemonic      string
-	keyringPassword  string
-	appCli           string
-	defaultDenoms    string
-	creditAmount     uint64
-	maxCredit        uint64
-	nodeAddress      string
-	legacySendCmd    bool
-	permitAccountSet *map[string]bool
+	port                int
+	keyringBackend      string
+	sdkVersion          string
+	keyName             string
+	keyMnemonic         string
+	keyringPassword     string
+	appCli              string
+	defaultDenoms       string
+	creditAmount        uint64
+	maxCredit           uint64
+	nodeAddress         string
+	legacySendCmd       bool
+	permitAccountSet    *map[string]bool
+	creditRefreshWindow time.Duration
 )
 
 func init() {
@@ -81,13 +84,28 @@ func init() {
 		environ.GetBool("LEGACY_SEND", false),
 		"whether to use legacy send command",
 	)
+	var rawCreditRefreshWindow string
+	flag.StringVar(&rawCreditRefreshWindow, "credit-refresh-window",
+		environ.GetString("CREDIT_REFRESH_WINDOW", "24h"),
+		"adds the duration to refresh the transfer limit to the faucet; defaults to 24h",
+	)
 	var permitListFilePath string
 	flag.StringVar(&permitListFilePath, "permit-list-file",
 		environ.GetString("PERMIT_LIST_FILE", ""),
 		"permit list file path (line separated accounts)",
 	)
+	flag.Parse()
+
+	var err error
+	creditRefreshWindow, err = time.ParseDuration(rawCreditRefreshWindow)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	if permitListFilePath != "" {
-		raw, err := ioutil.ReadFile(permitListFilePath)
+		fmt.Printf("Permit List is enabled: %s\n", permitListFilePath)
+
+		raw, err := os.ReadFile(permitListFilePath)
 		if err != nil {
 			log.Fatal(err)
 		}

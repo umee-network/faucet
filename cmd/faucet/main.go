@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"flag"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -20,8 +19,6 @@ import (
 )
 
 func main() {
-	flag.Parse()
-
 	configKeyringBackend, err := chaincmd.KeyringBackendFromString(keyringBackend)
 	if err != nil {
 		log.Fatal(err)
@@ -63,6 +60,8 @@ func main() {
 
 	faucetOptions = append(faucetOptions, cosmosfaucet.Account(keyName, keyMnemonic))
 
+	faucetOptions = append(faucetOptions, cosmosfaucet.RefreshWindow(creditRefreshWindow))
+
 	faucet, err := cosmosfaucet.New(context.Background(), cr, faucetOptions...)
 	if err != nil {
 		log.Fatal(err)
@@ -94,7 +93,7 @@ func permitListMiddleware(h http.HandlerFunc) http.HandlerFunc {
 			}
 
 			if !accountIsPermitted(req.AccountAddress) {
-				err := fmt.Errorf("%s is not permitted to receive a transfer from the faucet", req.AccountAddress)
+				err := fmt.Errorf("%s is not permitted to receive a transfer from this faucet", req.AccountAddress)
 				transferResponseError(w, http.StatusBadRequest, err)
 				return
 			}
